@@ -11,4 +11,10 @@ interface OmdbApiService {
         @Query("s") title: String,
         @Query("y") year: String? = null
     ): OmdbSearchResponse
+
+    @GET("/")
+    suspend fun getMovieDetails(
+        @Query("apikey") apiKey: String,
+        @Query("i") imdbId: String
+    ): OmdbMovieDetailsDto
 }

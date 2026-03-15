@@ -24,6 +24,7 @@ class AddMovieActivity : AppCompatActivity() {
     private lateinit var btnAddMovie: Button
 
     private var selectedPosterUrl: String = ""
+    private var selectedGenre: String = ""
 
     private val searchMovieLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -32,6 +33,7 @@ class AddMovieActivity : AppCompatActivity() {
                 val selectedTitle = data?.getStringExtra("selected_title") ?: ""
                 val selectedYear = data?.getStringExtra("selected_year") ?: ""
                 selectedPosterUrl = data?.getStringExtra("selected_poster") ?: ""
+                selectedGenre = data?.getStringExtra("selected_genre") ?: ""
 
                 etMovieTitle.setText(selectedTitle)
                 etMovieYear.setText(selectedYear)
@@ -39,10 +41,14 @@ class AddMovieActivity : AppCompatActivity() {
                 if (selectedPosterUrl.isNotBlank() && selectedPosterUrl != "N/A") {
                     Glide.with(this)
                         .load(selectedPosterUrl)
+                        .placeholder(android.R.drawable.ic_menu_report_image)
+                        .error(android.R.drawable.ic_menu_report_image)
                         .into(ivSelectedPoster)
                 } else {
                     ivSelectedPoster.setImageResource(android.R.drawable.ic_menu_report_image)
                 }
+
+                Toast.makeText(this, "Фильм выбран", Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -86,7 +92,8 @@ class AddMovieActivity : AppCompatActivity() {
             val movie = MovieEntity(
                 title = movieTitle,
                 year = movieYear,
-                posterUrl = selectedPosterUrl
+                posterUrl = selectedPosterUrl,
+                genre = selectedGenre
             )
 
             lifecycleScope.launch {

@@ -9,8 +9,11 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.wewatch.adapter.SearchMovieAdapter
+import com.example.wewatch.network.OmdbMovieDetailsDto
 import com.example.wewatch.network.RetrofitClient
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -34,6 +37,7 @@ class SearchMovieActivity : AppCompatActivity() {
                 putExtra("selected_title", movie.title)
                 putExtra("selected_year", movie.year)
                 putExtra("selected_poster", movie.poster)
+                putExtra("selected_genre", movie.genre)
             }
             setResult(Activity.RESULT_OK, resultIntent)
             finish()
@@ -63,15 +67,31 @@ class SearchMovieActivity : AppCompatActivity() {
                     year = year.ifBlank { null }
                 )
 
-                withContext(Dispatchers.Main) {
-                    if (response.response == "True" && !response.search.isNullOrEmpty()) {
-                        adapter.updateMovies(response.search)
-                        Toast.makeText(
-                            this@SearchMovieActivity,
-                            "Найдено: ${response.search.size}",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    } else {
+                if (response.response == "True" && !response.search.isNullOrEmpty()) {
+                    val detailedMovies = response.search.map { movie ->
+                        async {
+                            try {
+                                RetrofitClient.api.getMovieDetails(
+                                    apiKey = apiKey,
+                                    imdbId = movie.imdbId
+                                )
+                            } catch (e: Exception) {
+                                OmdbMovieDetailsDto(
+                                    title = movie.title,
+                                    year = movie.year,
+                                    poster = movie.poster,
+                                    imdbId = movie.imdbId,
+                                    genre = ""
+                                )
+                            }
+                        }
+                    }.awaitAll()
+
+                    withContext(Dispatchers.Main) {
+                        adapter.updateMovies(detailedMovies)
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
                         Toast.makeText(
                             this@SearchMovieActivity,
                             response.error ?: "Фильмы не найдены",
@@ -83,7 +103,7 @@ class SearchMovieActivity : AppCompatActivity() {
                 withContext(Dispatchers.Main) {
                     Toast.makeText(
                         this@SearchMovieActivity,
-                        "Ошибка: ${e.message}",
+                        "Ошибка сети: ${e.message}",
                         Toast.LENGTH_LONG
                     ).show()
                 }

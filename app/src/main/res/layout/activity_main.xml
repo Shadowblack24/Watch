@@ -60,6 +60,7 @@
         android:layout_margin="16dp"
         android:contentDescription="Добавить фильм"
         android:src="@android:drawable/ic_input_add"
+        app:layout_anchor="@id/contentLayout"
         app:layout_anchorGravity="bottom|end" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
