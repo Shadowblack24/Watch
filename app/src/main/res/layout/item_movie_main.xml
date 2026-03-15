@@ -17,15 +17,15 @@
             android:id="@+id/ivPoster"
             android:layout_width="80dp"
             android:layout_height="100dp"
-            android:contentDescription="Постер фильма"
+            android:contentDescription="Постер"
             android:scaleType="centerCrop"
             android:src="@android:drawable/ic_menu_report_image" />
 
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
             android:layout_weight="1"
+            android:layout_marginStart="12dp"
             android:orientation="vertical">
 
             <TextView
