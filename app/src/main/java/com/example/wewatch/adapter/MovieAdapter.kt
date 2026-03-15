@@ -7,6 +7,7 @@ import android.widget.CheckBox
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.example.wewatch.R
 import com.example.wewatch.data.MovieEntity
 
@@ -34,7 +35,15 @@ class MovieAdapter(
         holder.tvTitle.text = movie.title
         holder.tvYear.text = if (movie.year.isBlank()) "Год не указан" else movie.year
 
-        holder.ivPoster.setImageResource(android.R.drawable.ic_menu_report_image)
+        if (movie.posterUrl.isNotBlank() && movie.posterUrl != "N/A") {
+            Glide.with(holder.itemView.context)
+                .load(movie.posterUrl)
+                .placeholder(android.R.drawable.ic_menu_report_image)
+                .error(android.R.drawable.ic_menu_report_image)
+                .into(holder.ivPoster)
+        } else {
+            holder.ivPoster.setImageResource(android.R.drawable.ic_menu_report_image)
+        }
 
         holder.checkBoxDelete.setOnCheckedChangeListener(null)
         holder.checkBoxDelete.isChecked = movie.isSelectedForDelete
