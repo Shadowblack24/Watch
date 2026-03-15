@@ -1,11 +1,16 @@
 package com.example.wewatch
 
+import android.app.Activity
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.bumptech.glide.Glide
 import com.example.wewatch.data.AppDatabase
 import com.example.wewatch.data.MovieEntity
 import kotlinx.coroutines.launch
@@ -14,8 +19,32 @@ class AddMovieActivity : AppCompatActivity() {
 
     private lateinit var etMovieTitle: EditText
     private lateinit var etMovieYear: EditText
+    private lateinit var ivSelectedPoster: ImageView
     private lateinit var btnSearchMovie: Button
     private lateinit var btnAddMovie: Button
+
+    private var selectedPosterUrl: String = ""
+
+    private val searchMovieLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                val data = result.data
+                val selectedTitle = data?.getStringExtra("selected_title") ?: ""
+                val selectedYear = data?.getStringExtra("selected_year") ?: ""
+                selectedPosterUrl = data?.getStringExtra("selected_poster") ?: ""
+
+                etMovieTitle.setText(selectedTitle)
+                etMovieYear.setText(selectedYear)
+
+                if (selectedPosterUrl.isNotBlank() && selectedPosterUrl != "N/A") {
+                    Glide.with(this)
+                        .load(selectedPosterUrl)
+                        .into(ivSelectedPoster)
+                } else {
+                    ivSelectedPoster.setImageResource(android.R.drawable.ic_menu_report_image)
+                }
+            }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,11 +54,24 @@ class AddMovieActivity : AppCompatActivity() {
 
         etMovieTitle = findViewById(R.id.etMovieTitle)
         etMovieYear = findViewById(R.id.etMovieYear)
+        ivSelectedPoster = findViewById(R.id.ivSelectedPoster)
         btnSearchMovie = findViewById(R.id.btnSearchMovie)
         btnAddMovie = findViewById(R.id.btnAddMovie)
 
         btnSearchMovie.setOnClickListener {
-            Toast.makeText(this, "Поиск подключим следующим этапом", Toast.LENGTH_SHORT).show()
+            val movieTitle = etMovieTitle.text.toString().trim()
+            val movieYear = etMovieYear.text.toString().trim()
+
+            if (movieTitle.isEmpty()) {
+                Toast.makeText(this, "Введите название фильма для поиска", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+
+            val intent = Intent(this, SearchMovieActivity::class.java).apply {
+                putExtra("movie_title", movieTitle)
+                putExtra("movie_year", movieYear)
+            }
+            searchMovieLauncher.launch(intent)
         }
 
         btnAddMovie.setOnClickListener {
@@ -43,7 +85,8 @@ class AddMovieActivity : AppCompatActivity() {
 
             val movie = MovieEntity(
                 title = movieTitle,
-                year = movieYear
+                year = movieYear,
+                posterUrl = selectedPosterUrl
             )
 
             lifecycleScope.launch {
