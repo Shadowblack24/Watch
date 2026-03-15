@@ -60,4 +60,8 @@ class MovieAdapter(
         movies.addAll(newMovies)
         notifyDataSetChanged()
     }
+
+    fun getCurrentMovies(): List<MovieEntity> {
+        return movies.toList()
+    }
 }

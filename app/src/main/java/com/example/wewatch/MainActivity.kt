@@ -7,16 +7,15 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.wewatch.adapter.MovieAdapter
 import com.example.wewatch.data.AppDatabase
-import com.example.wewatch.data.MovieEntity
+import com.example.wewatch.repository.MovieRepository
+import com.example.wewatch.viewmodel.MainViewModel
+import com.example.wewatch.viewmodel.MainViewModelFactory
 import com.google.android.material.floatingactionbutton.FloatingActionButton
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 class MainActivity : AppCompatActivity() {
 
@@ -25,6 +24,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var emptyStateLayout: LinearLayout
     private lateinit var recyclerMovies: RecyclerView
     private lateinit var movieAdapter: MovieAdapter
+    private lateinit var viewModel: MainViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,87 +38,51 @@ class MainActivity : AppCompatActivity() {
         recyclerMovies = findViewById(R.id.recyclerMovies)
 
         setupRecyclerView()
+        setupViewModel()
 
         fabAddMovie.setOnClickListener {
             startActivity(Intent(this, AddMovieActivity::class.java))
         }
 
         btnDeleteSelected.setOnClickListener {
-            deleteSelectedMovies()
-        }
-    }
+            val currentMovies = movieAdapter.getCurrentMovies()
+            val hasSelected = currentMovies.any { it.isSelectedForDelete }
 
-    override fun onResume() {
-        super.onResume()
-        loadMovies()
+            if (!hasSelected) {
+                Toast.makeText(this, "Сначала отметьте фильмы галочками", Toast.LENGTH_SHORT).show()
+            } else {
+                viewModel.deleteSelectedMovies()
+                Toast.makeText(this, "Выбранные фильмы удалены", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun setupRecyclerView() {
         movieAdapter = MovieAdapter(mutableListOf()) { movie, isChecked ->
-            updateMovieSelection(movie, isChecked)
+            viewModel.updateMovieSelection(movie, isChecked)
         }
 
         recyclerMovies.layoutManager = LinearLayoutManager(this)
         recyclerMovies.adapter = movieAdapter
     }
 
-    private fun loadMovies() {
-        lifecycleScope.launch(Dispatchers.IO) {
-            val movies = AppDatabase.getDatabase(this@MainActivity)
-                .movieDao()
-                .getAllMovies()
+    private fun setupViewModel() {
+        val dao = AppDatabase.getDatabase(applicationContext).movieDao()
+        val repository = MovieRepository(dao)
+        val factory = MainViewModelFactory(repository)
 
-            withContext(Dispatchers.Main) {
-                if (movies.isEmpty()) {
-                    emptyStateLayout.visibility = View.VISIBLE
-                    recyclerMovies.visibility = View.GONE
-                    btnDeleteSelected.visibility = View.GONE
-                } else {
-                    emptyStateLayout.visibility = View.GONE
-                    recyclerMovies.visibility = View.VISIBLE
-                    btnDeleteSelected.visibility = View.VISIBLE
-                    movieAdapter.updateMovies(movies)
-                }
-            }
-        }
-    }
+        viewModel = ViewModelProvider(this, factory)[MainViewModel::class.java]
 
-    private fun updateMovieSelection(movie: MovieEntity, isChecked: Boolean) {
-        lifecycleScope.launch(Dispatchers.IO) {
-            val updatedMovie = movie.copy(isSelectedForDelete = isChecked)
-            AppDatabase.getDatabase(this@MainActivity)
-                .movieDao()
-                .updateMovie(updatedMovie)
-        }
-    }
-
-    private fun deleteSelectedMovies() {
-        lifecycleScope.launch(Dispatchers.IO) {
-            AppDatabase.getDatabase(this@MainActivity)
-                .movieDao()
-                .deleteSelectedMovies()
-
-            val movies = AppDatabase.getDatabase(this@MainActivity)
-                .movieDao()
-                .getAllMovies()
-
-            withContext(Dispatchers.Main) {
-                Toast.makeText(
-                    this@MainActivity,
-                    "Выбранные фильмы удалены",
-                    Toast.LENGTH_SHORT
-                ).show()
-
-                if (movies.isEmpty()) {
-                    emptyStateLayout.visibility = View.VISIBLE
-                    recyclerMovies.visibility = View.GONE
-                    btnDeleteSelected.visibility = View.GONE
-                } else {
-                    emptyStateLayout.visibility = View.GONE
-                    recyclerMovies.visibility = View.VISIBLE
-                    btnDeleteSelected.visibility = View.VISIBLE
-                    movieAdapter.updateMovies(movies)
-                }
+        viewModel.movies.observe(this) { movies ->
+            if (movies.isEmpty()) {
+                emptyStateLayout.visibility = View.VISIBLE
+                recyclerMovies.visibility = View.GONE
+                btnDeleteSelected.visibility = View.GONE
+            } else {
+                emptyStateLayout.visibility = View.GONE
+                recyclerMovies.visibility = View.VISIBLE
+                btnDeleteSelected.visibility = View.VISIBLE
+                movieAdapter.updateMovies(movies)
             }
         }
     }

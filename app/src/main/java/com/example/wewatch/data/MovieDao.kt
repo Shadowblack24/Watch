@@ -1,5 +1,6 @@
 package com.example.wewatch.data
 
+import androidx.lifecycle.LiveData
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
@@ -8,6 +9,9 @@ import androidx.room.Update
 
 @Dao
 interface MovieDao {
+
+    @Query("SELECT * FROM movies ORDER BY id DESC")
+    fun getAllMoviesLive(): LiveData<List<MovieEntity>>
 
     @Query("SELECT * FROM movies ORDER BY id DESC")
     suspend fun getAllMovies(): List<MovieEntity>
