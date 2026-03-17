@@ -12,9 +12,10 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.wewatch.adapter.MovieAdapter
 import com.example.wewatch.data.AppDatabase
+import com.example.wewatch.mvi.main.MainIntent
+import com.example.wewatch.mvi.main.MainMviViewModel
+import com.example.wewatch.mvi.main.MainMviViewModelFactory
 import com.example.wewatch.repository.MovieRepository
-import com.example.wewatch.viewmodel.MainViewModel
-import com.example.wewatch.viewmodel.MainViewModelFactory
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 
 class MainActivity : AppCompatActivity() {
@@ -24,7 +25,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var emptyStateLayout: LinearLayout
     private lateinit var recyclerMovies: RecyclerView
     private lateinit var movieAdapter: MovieAdapter
-    private lateinit var viewModel: MainViewModel
+    private lateinit var viewModel: MainMviViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,27 +40,14 @@ class MainActivity : AppCompatActivity() {
 
         setupRecyclerView()
         setupViewModel()
+        setupListeners()
 
-        fabAddMovie.setOnClickListener {
-            startActivity(Intent(this, AddMovieActivity::class.java))
-        }
-
-        btnDeleteSelected.setOnClickListener {
-            val currentMovies = movieAdapter.getCurrentMovies()
-            val hasSelected = currentMovies.any { it.isSelectedForDelete }
-
-            if (!hasSelected) {
-                Toast.makeText(this, "Сначала отметьте фильмы галочками", Toast.LENGTH_SHORT).show()
-            } else {
-                viewModel.deleteSelectedMovies()
-                Toast.makeText(this, "Выбранные фильмы удалены", Toast.LENGTH_SHORT).show()
-            }
-        }
+        viewModel.handleIntent(MainIntent.LoadMovies)
     }
 
     private fun setupRecyclerView() {
         movieAdapter = MovieAdapter(mutableListOf()) { movie, isChecked ->
-            viewModel.updateMovieSelection(movie, isChecked)
+            viewModel.handleIntent(MainIntent.ToggleMovieSelection(movie, isChecked))
         }
 
         recyclerMovies.layoutManager = LinearLayoutManager(this)
@@ -69,21 +57,45 @@ class MainActivity : AppCompatActivity() {
     private fun setupViewModel() {
         val dao = AppDatabase.getDatabase(applicationContext).movieDao()
         val repository = MovieRepository(dao)
-        val factory = MainViewModelFactory(repository)
+        val factory = MainMviViewModelFactory(repository)
 
-        viewModel = ViewModelProvider(this, factory)[MainViewModel::class.java]
+        viewModel = ViewModelProvider(this, factory)[MainMviViewModel::class.java]
 
-        viewModel.movies.observe(this) { movies ->
-            if (movies.isEmpty()) {
-                emptyStateLayout.visibility = View.VISIBLE
-                recyclerMovies.visibility = View.GONE
-                btnDeleteSelected.visibility = View.GONE
-            } else {
-                emptyStateLayout.visibility = View.GONE
-                recyclerMovies.visibility = View.VISIBLE
-                btnDeleteSelected.visibility = View.VISIBLE
-                movieAdapter.updateMovies(movies)
-            }
+        viewModel.state.observe(this) { state ->
+            renderState(state)
         }
+    }
+
+    private fun setupListeners() {
+        fabAddMovie.setOnClickListener {
+            startActivity(Intent(this, AddMovieActivity::class.java))
+        }
+
+        btnDeleteSelected.setOnClickListener {
+            viewModel.handleIntent(MainIntent.DeleteSelectedMovies)
+        }
+    }
+
+    private fun renderState(state: com.example.wewatch.mvi.main.MainState) {
+        if (state.movies.isEmpty()) {
+            emptyStateLayout.visibility = View.VISIBLE
+            recyclerMovies.visibility = View.GONE
+            btnDeleteSelected.visibility = View.GONE
+        } else {
+            emptyStateLayout.visibility = View.GONE
+            recyclerMovies.visibility = View.VISIBLE
+            btnDeleteSelected.visibility = View.VISIBLE
+            movieAdapter.updateMovies(state.movies)
+        }
+
+        state.message?.let { message ->
+            Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+            viewModel.clearMessage()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        viewModel.handleIntent(MainIntent.LoadMovies)
     }
 }

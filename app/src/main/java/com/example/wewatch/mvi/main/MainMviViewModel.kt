@@ -2,6 +2,7 @@ package com.example.wewatch.mvi.main
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.wewatch.data.MovieEntity
@@ -15,6 +16,8 @@ class MainMviViewModel(
     private val _state = MutableLiveData(MainState())
     val state: LiveData<MainState> = _state
 
+    private var moviesObserver: Observer<List<MovieEntity>>? = null
+
     fun handleIntent(intent: MainIntent) {
         when (intent) {
             is MainIntent.LoadMovies -> loadMovies()
@@ -26,16 +29,17 @@ class MainMviViewModel(
     private fun loadMovies() {
         _state.value = _state.value?.copy(isLoading = true)
 
-        viewModelScope.launch {
-            repository.allMovies.observeForever { movies ->
+        if (moviesObserver == null) {
+            moviesObserver = Observer { movies ->
                 _state.postValue(
-                    MainState(
+                    _state.value?.copy(
                         movies = movies,
                         isLoading = false,
-                        message = null
+                        message = _state.value?.message
                     )
                 )
             }
+            repository.allMovies.observeForever(moviesObserver!!)
         }
     }
 
@@ -66,5 +70,12 @@ class MainMviViewModel(
 
     fun clearMessage() {
         _state.value = _state.value?.copy(message = null)
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        moviesObserver?.let {
+            repository.allMovies.removeObserver(it)
+        }
     }
 }
