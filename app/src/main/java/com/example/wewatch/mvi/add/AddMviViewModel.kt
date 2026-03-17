@@ -4,12 +4,12 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.wewatch.data.MovieEntity
-import com.example.wewatch.repository.MovieRepository
+import com.example.wewatch.domain.model.Movie
+import com.example.wewatch.domain.usecase.InsertMovieUseCase
 import kotlinx.coroutines.launch
 
 class AddMviViewModel(
-    private val repository: MovieRepository
+    private val insertMovieUseCase: InsertMovieUseCase
 ) : ViewModel() {
 
     private val _state = MutableLiveData(AddState())
@@ -17,10 +17,11 @@ class AddMviViewModel(
 
     fun handleIntent(intent: AddIntent) {
         when (intent) {
+
             is AddIntent.SearchMovie -> {
                 if (intent.title.isBlank()) {
                     _state.value = _state.value?.copy(
-                        message = "Введите название фильма для поиска"
+                        message = "Введите название фильма"
                     )
                 }
             }
@@ -30,8 +31,7 @@ class AddMviViewModel(
                     title = intent.title,
                     year = intent.year,
                     posterUrl = intent.posterUrl,
-                    genre = intent.genre,
-                    message = "Фильм выбран"
+                    genre = intent.genre
                 )
             }
 
@@ -40,27 +40,29 @@ class AddMviViewModel(
     }
 
     private fun addMovie() {
-        val currentState = _state.value ?: AddState()
 
-        if (currentState.title.isBlank()) {
-            _state.value = currentState.copy(
+        val current = _state.value ?: return
+
+        if (current.title.isBlank()) {
+            _state.value = current.copy(
                 message = "Введите название фильма"
             )
             return
         }
 
         viewModelScope.launch {
-            val movie = MovieEntity(
-                title = currentState.title,
-                year = currentState.year,
-                posterUrl = currentState.posterUrl,
-                genre = currentState.genre
+
+            val movie = Movie(
+                title = current.title,
+                year = current.year,
+                posterUrl = current.posterUrl,
+                genre = current.genre
             )
 
-            repository.insertMovie(movie)
+            insertMovieUseCase(movie)
 
             _state.postValue(
-                currentState.copy(
+                current.copy(
                     isMovieAdded = true,
                     message = "Фильм добавлен"
                 )

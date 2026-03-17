@@ -12,6 +12,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import com.bumptech.glide.Glide
 import com.example.wewatch.data.AppDatabase
+import com.example.wewatch.data.repository.MovieRepositoryImpl
+import com.example.wewatch.domain.usecase.InsertMovieUseCase
 import com.example.wewatch.mvi.add.AddIntent
 import com.example.wewatch.mvi.add.AddMviViewModel
 import com.example.wewatch.mvi.add.AddMviViewModelFactory
@@ -64,8 +66,11 @@ class AddMovieActivity : AppCompatActivity() {
 
     private fun setupViewModel() {
         val dao = AppDatabase.getDatabase(applicationContext).movieDao()
-        val repository = MovieRepository(dao)
-        val factory = AddMviViewModelFactory(repository)
+        val repository = MovieRepositoryImpl(dao)
+
+        val insertMovieUseCase = InsertMovieUseCase(repository)
+
+        val factory = AddMviViewModelFactory(insertMovieUseCase)
 
         viewModel = ViewModelProvider(this, factory)[AddMviViewModel::class.java]
 

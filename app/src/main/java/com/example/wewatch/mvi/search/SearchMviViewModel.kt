@@ -4,20 +4,24 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.wewatch.repository.MovieRepository
+import com.example.wewatch.domain.usecase.SearchMoviesUseCase
 import kotlinx.coroutines.launch
 
 class SearchMviViewModel(
-    private val repository: MovieRepository
+    private val searchMoviesUseCase: SearchMoviesUseCase
 ) : ViewModel() {
 
     private val _state = MutableLiveData(SearchState())
     val state: LiveData<SearchState> = _state
 
     fun handleIntent(intent: SearchIntent, apiKey: String) {
+
         when (intent) {
+
             is SearchIntent.SearchMovies -> searchMovies(apiKey, intent.title, intent.year)
+
         }
+
     }
 
     private fun searchMovies(apiKey: String, title: String, year: String?) {
@@ -28,7 +32,7 @@ class SearchMviViewModel(
 
             try {
 
-                val movies = repository.searchMovies(apiKey, title, year)
+                val movies = searchMoviesUseCase(apiKey, title, year)
 
                 if (movies.isEmpty()) {
 
@@ -44,8 +48,7 @@ class SearchMviViewModel(
                     _state.postValue(
                         _state.value?.copy(
                             movies = movies,
-                            isLoading = false,
-                            message = null
+                            isLoading = false
                         )
                     )
 
@@ -56,7 +59,7 @@ class SearchMviViewModel(
                 _state.postValue(
                     _state.value?.copy(
                         isLoading = false,
-                        message = "Ошибка сети: ${e.message}"
+                        message = "Ошибка сети"
                     )
                 )
 
@@ -69,5 +72,4 @@ class SearchMviViewModel(
     fun clearMessage() {
         _state.value = _state.value?.copy(message = null)
     }
-
 }

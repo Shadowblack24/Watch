@@ -10,6 +10,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.wewatch.adapter.SearchMovieAdapter
 import com.example.wewatch.data.AppDatabase
+import com.example.wewatch.data.repository.MovieRepositoryImpl
+import com.example.wewatch.domain.usecase.SearchMoviesUseCase
 import com.example.wewatch.mvi.search.SearchIntent
 import com.example.wewatch.mvi.search.SearchMviViewModel
 import com.example.wewatch.mvi.search.SearchMviViewModelFactory
@@ -61,8 +63,11 @@ class SearchMovieActivity : AppCompatActivity() {
     private fun setupViewModel() {
 
         val dao = AppDatabase.getDatabase(applicationContext).movieDao()
-        val repository = MovieRepository(dao)
-        val factory = SearchMviViewModelFactory(repository)
+        val repository = MovieRepositoryImpl(dao)
+
+        val searchMoviesUseCase = SearchMoviesUseCase(repository)
+
+        val factory = SearchMviViewModelFactory(searchMoviesUseCase)
 
         viewModel = ViewModelProvider(this, factory)[SearchMviViewModel::class.java]
 
