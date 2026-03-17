@@ -5,22 +5,20 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.wewatch.adapter.SearchMovieAdapter
-import com.example.wewatch.network.OmdbMovieDetailsDto
-import com.example.wewatch.network.RetrofitClient
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import com.example.wewatch.data.AppDatabase
+import com.example.wewatch.repository.MovieRepository
+import com.example.wewatch.viewmodel.SearchMovieViewModel
+import com.example.wewatch.viewmodel.SearchMovieViewModelFactory
 
 class SearchMovieActivity : AppCompatActivity() {
 
     private lateinit var recyclerSearchMovies: RecyclerView
     private lateinit var adapter: SearchMovieAdapter
+    private lateinit var viewModel: SearchMovieViewModel
 
     private val apiKey = "7167c7ca"
 
@@ -46,6 +44,8 @@ class SearchMovieActivity : AppCompatActivity() {
         recyclerSearchMovies.layoutManager = LinearLayoutManager(this)
         recyclerSearchMovies.adapter = adapter
 
+        setupViewModel()
+
         val movieTitle = intent.getStringExtra("movie_title") ?: ""
         val movieYear = intent.getStringExtra("movie_year") ?: ""
 
@@ -55,59 +55,26 @@ class SearchMovieActivity : AppCompatActivity() {
             return
         }
 
-        searchMovies(movieTitle, movieYear)
+        viewModel.searchMovies(
+            apiKey = apiKey,
+            title = movieTitle,
+            year = movieYear.ifBlank { null }
+        )
     }
 
-    private fun searchMovies(title: String, year: String) {
-        lifecycleScope.launch(Dispatchers.IO) {
-            try {
-                val response = RetrofitClient.api.searchMovies(
-                    apiKey = apiKey,
-                    title = title,
-                    year = year.ifBlank { null }
-                )
+    private fun setupViewModel() {
+        val dao = AppDatabase.getDatabase(applicationContext).movieDao()
+        val repository = MovieRepository(dao)
+        val factory = SearchMovieViewModelFactory(repository)
 
-                if (response.response == "True" && !response.search.isNullOrEmpty()) {
-                    val detailedMovies = response.search.map { movie ->
-                        async {
-                            try {
-                                RetrofitClient.api.getMovieDetails(
-                                    apiKey = apiKey,
-                                    imdbId = movie.imdbId
-                                )
-                            } catch (e: Exception) {
-                                OmdbMovieDetailsDto(
-                                    title = movie.title,
-                                    year = movie.year,
-                                    poster = movie.poster,
-                                    imdbId = movie.imdbId,
-                                    genre = ""
-                                )
-                            }
-                        }
-                    }.awaitAll()
+        viewModel = ViewModelProvider(this, factory)[SearchMovieViewModel::class.java]
 
-                    withContext(Dispatchers.Main) {
-                        adapter.updateMovies(detailedMovies)
-                    }
-                } else {
-                    withContext(Dispatchers.Main) {
-                        Toast.makeText(
-                            this@SearchMovieActivity,
-                            response.error ?: "Фильмы не найдены",
-                            Toast.LENGTH_LONG
-                        ).show()
-                    }
-                }
-            } catch (e: Exception) {
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(
-                        this@SearchMovieActivity,
-                        "Ошибка сети: ${e.message}",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-            }
+        viewModel.movies.observe(this) { movies ->
+            adapter.updateMovies(movies)
+        }
+
+        viewModel.errorMessage.observe(this) { message ->
+            Toast.makeText(this, message, Toast.LENGTH_LONG).show()
         }
     }
 }

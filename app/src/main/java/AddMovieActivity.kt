@@ -9,11 +9,13 @@ import android.widget.ImageView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.ViewModelProvider
 import com.bumptech.glide.Glide
 import com.example.wewatch.data.AppDatabase
 import com.example.wewatch.data.MovieEntity
-import kotlinx.coroutines.launch
+import com.example.wewatch.repository.MovieRepository
+import com.example.wewatch.viewmodel.AddMovieViewModel
+import com.example.wewatch.viewmodel.AddMovieViewModelFactory
 
 class AddMovieActivity : AppCompatActivity() {
 
@@ -22,6 +24,7 @@ class AddMovieActivity : AppCompatActivity() {
     private lateinit var ivSelectedPoster: ImageView
     private lateinit var btnSearchMovie: Button
     private lateinit var btnAddMovie: Button
+    private lateinit var viewModel: AddMovieViewModel
 
     private var selectedPosterUrl: String = ""
     private var selectedGenre: String = ""
@@ -64,6 +67,8 @@ class AddMovieActivity : AppCompatActivity() {
         btnSearchMovie = findViewById(R.id.btnSearchMovie)
         btnAddMovie = findViewById(R.id.btnAddMovie)
 
+        setupViewModel()
+
         btnSearchMovie.setOnClickListener {
             val movieTitle = etMovieTitle.text.toString().trim()
             val movieYear = etMovieYear.text.toString().trim()
@@ -96,20 +101,17 @@ class AddMovieActivity : AppCompatActivity() {
                 genre = selectedGenre
             )
 
-            lifecycleScope.launch {
-                AppDatabase.getDatabase(this@AddMovieActivity)
-                    .movieDao()
-                    .insertMovie(movie)
+            viewModel.insertMovie(movie)
 
-                runOnUiThread {
-                    Toast.makeText(
-                        this@AddMovieActivity,
-                        "Фильм добавлен",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    finish()
-                }
-            }
+            Toast.makeText(this, "Фильм добавлен", Toast.LENGTH_SHORT).show()
+            finish()
         }
+    }
+
+    private fun setupViewModel() {
+        val dao = AppDatabase.getDatabase(applicationContext).movieDao()
+        val repository = MovieRepository(dao)
+        val factory = AddMovieViewModelFactory(repository)
+        viewModel = ViewModelProvider(this, factory)[AddMovieViewModel::class.java]
     }
 }
