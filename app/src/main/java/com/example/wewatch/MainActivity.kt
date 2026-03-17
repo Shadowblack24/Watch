@@ -12,10 +12,13 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.wewatch.adapter.MovieAdapter
 import com.example.wewatch.data.AppDatabase
+import com.example.wewatch.data.repository.MovieRepositoryImpl
+import com.example.wewatch.domain.usecase.DeleteSelectedMoviesUseCase
+import com.example.wewatch.domain.usecase.GetAllMoviesUseCase
+import com.example.wewatch.domain.usecase.UpdateMovieUseCase
 import com.example.wewatch.mvi.main.MainIntent
 import com.example.wewatch.mvi.main.MainMviViewModel
 import com.example.wewatch.mvi.main.MainMviViewModelFactory
-import com.example.wewatch.repository.MovieRepository
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 
 class MainActivity : AppCompatActivity() {
@@ -56,8 +59,17 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupViewModel() {
         val dao = AppDatabase.getDatabase(applicationContext).movieDao()
-        val repository = MovieRepository(dao)
-        val factory = MainMviViewModelFactory(repository)
+        val repository = MovieRepositoryImpl(dao)
+
+        val getAllMoviesUseCase = GetAllMoviesUseCase(repository)
+        val updateMovieUseCase = UpdateMovieUseCase(repository)
+        val deleteSelectedMoviesUseCase = DeleteSelectedMoviesUseCase(repository)
+
+        val factory = MainMviViewModelFactory(
+            getAllMoviesUseCase,
+            updateMovieUseCase,
+            deleteSelectedMoviesUseCase
+        )
 
         viewModel = ViewModelProvider(this, factory)[MainMviViewModel::class.java]
 

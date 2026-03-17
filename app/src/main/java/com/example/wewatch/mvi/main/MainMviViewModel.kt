@@ -5,18 +5,22 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.wewatch.data.MovieEntity
-import com.example.wewatch.repository.MovieRepository
+import com.example.wewatch.domain.model.Movie
+import com.example.wewatch.domain.usecase.DeleteSelectedMoviesUseCase
+import com.example.wewatch.domain.usecase.GetAllMoviesUseCase
+import com.example.wewatch.domain.usecase.UpdateMovieUseCase
 import kotlinx.coroutines.launch
 
 class MainMviViewModel(
-    private val repository: MovieRepository
+    private val getAllMoviesUseCase: GetAllMoviesUseCase,
+    private val updateMovieUseCase: UpdateMovieUseCase,
+    private val deleteSelectedMoviesUseCase: DeleteSelectedMoviesUseCase
 ) : ViewModel() {
 
     private val _state = MutableLiveData(MainState())
     val state: LiveData<MainState> = _state
 
-    private var moviesObserver: Observer<List<MovieEntity>>? = null
+    private var moviesObserver: Observer<List<Movie>>? = null
 
     fun handleIntent(intent: MainIntent) {
         when (intent) {
@@ -39,14 +43,14 @@ class MainMviViewModel(
                     )
                 )
             }
-            repository.allMovies.observeForever(moviesObserver!!)
+            getAllMoviesUseCase().observeForever(moviesObserver!!)
         }
     }
 
-    private fun updateMovieSelection(movie: MovieEntity, isChecked: Boolean) {
+    private fun updateMovieSelection(movie: Movie, isChecked: Boolean) {
         viewModelScope.launch {
             val updatedMovie = movie.copy(isSelectedForDelete = isChecked)
-            repository.updateMovie(updatedMovie)
+            updateMovieUseCase(updatedMovie)
         }
     }
 
@@ -60,7 +64,7 @@ class MainMviViewModel(
                     _state.value?.copy(message = "Сначала отметьте фильмы галочками")
                 )
             } else {
-                repository.deleteSelectedMovies()
+                deleteSelectedMoviesUseCase()
                 _state.postValue(
                     _state.value?.copy(message = "Выбранные фильмы удалены")
                 )
@@ -75,7 +79,7 @@ class MainMviViewModel(
     override fun onCleared() {
         super.onCleared()
         moviesObserver?.let {
-            repository.allMovies.removeObserver(it)
+            getAllMoviesUseCase().removeObserver(it)
         }
     }
 }

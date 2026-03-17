@@ -9,11 +9,11 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.example.wewatch.R
-import com.example.wewatch.data.MovieEntity
+import com.example.wewatch.domain.model.Movie
 
 class MovieAdapter(
-    private var movies: MutableList<MovieEntity>,
-    private val onCheckedChange: (MovieEntity, Boolean) -> Unit
+    private var movies: MutableList<Movie>,
+    private val onCheckedChange: (Movie, Boolean) -> Unit
 ) : RecyclerView.Adapter<MovieAdapter.MovieViewHolder>() {
 
     class MovieViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -55,13 +55,13 @@ class MovieAdapter(
 
     override fun getItemCount(): Int = movies.size
 
-    fun updateMovies(newMovies: List<MovieEntity>) {
+    fun updateMovies(newMovies: List<Movie>) {
         movies.clear()
         movies.addAll(newMovies)
         notifyDataSetChanged()
     }
 
-    fun getCurrentMovies(): List<MovieEntity> {
+    fun getCurrentMovies(): List<Movie> {
         return movies.toList()
     }
 }
