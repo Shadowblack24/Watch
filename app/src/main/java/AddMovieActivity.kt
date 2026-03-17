@@ -102,9 +102,6 @@ class AddMovieActivity : AppCompatActivity() {
             )
 
             viewModel.insertMovie(movie)
-
-            Toast.makeText(this, "Фильм добавлен", Toast.LENGTH_SHORT).show()
-            finish()
         }
     }
 
@@ -113,5 +110,13 @@ class AddMovieActivity : AppCompatActivity() {
         val repository = MovieRepository(dao)
         val factory = AddMovieViewModelFactory(repository)
         viewModel = ViewModelProvider(this, factory)[AddMovieViewModel::class.java]
+
+        viewModel.movieAdded.observe(this) { added ->
+            if (added) {
+                Toast.makeText(this, "Фильм добавлен", Toast.LENGTH_SHORT).show()
+                viewModel.resetMovieAddedState()
+                finish()
+            }
+        }
     }
 }
