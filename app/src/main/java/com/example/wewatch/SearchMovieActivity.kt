@@ -23,7 +23,7 @@ class SearchMovieActivity : AppCompatActivity() {
     private lateinit var adapter: SearchMovieAdapter
     private lateinit var viewModel: SearchMviViewModel
 
-    private val apiKey = "ТВОЙ_API_KEY"
+    private val apiKey = "7167c7ca"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
